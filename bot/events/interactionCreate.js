@@ -35,7 +35,14 @@ module.exports = {
             await command.handleSelectMenu(interaction);
           } catch (error) {
             console.error('[Bot] Error handling select menu:', error);
-            await interaction.reply({ content: '❌ An error occurred.', ephemeral: true });
+            const errMsg = { content: '❌ An error occurred.', ephemeral: true };
+            try {
+              if (interaction.replied || interaction.deferred) {
+                await interaction.followUp(errMsg);
+              } else {
+                await interaction.reply(errMsg);
+              }
+            } catch (e) { /* ignore follow-up errors */ }
           }
         }
       }
@@ -52,7 +59,14 @@ module.exports = {
             await command.handleButton(interaction);
           } catch (error) {
             console.error('[Bot] Error handling button:', error);
-            await interaction.reply({ content: '❌ An error occurred.', ephemeral: true });
+            const errMsg = { content: '❌ An error occurred.', ephemeral: true };
+            try {
+              if (interaction.replied || interaction.deferred) {
+                await interaction.followUp(errMsg);
+              } else {
+                await interaction.reply(errMsg);
+              }
+            } catch (e) { /* ignore follow-up errors */ }
           }
         }
       }

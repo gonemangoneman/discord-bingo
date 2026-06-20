@@ -10,6 +10,7 @@
   ],
   "scripts": {
     "dev": "concurrently -n bot,server,client -c blue,green,magenta \"npm run bot\" \"npm run server\" \"npm run client\"",
+    "start": "node start.js",
     "bot": "npm run start --workspace=bot",
     "server": "npm run start --workspace=server",
     "client": "npm run dev --workspace=client",
@@ -17,7 +18,11 @@
     "deploy-commands": "node bot/deploy-commands.js",
     "tunnel": "cloudflared tunnel --url http://localhost:3001"
   },
+  "dependencies": {
+    "dotenv": "^16.5.0"
+  },
   "devDependencies": {
     "concurrently": "^9.1.0"
   }
 }
+

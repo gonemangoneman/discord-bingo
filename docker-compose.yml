@@ -1,0 +1,38 @@
+services:
+  # ─── Bingo Bot + Server ─────────────────────────────────────
+  bingo:
+    build: .
+    container_name: bingo-bot
+    restart: unless-stopped
+    env_file: .env
+    environment:
+      - PORT=3001
+      - NODE_ENV=production
+      - DATABASE_PATH=/app/data/bingo.db
+    volumes:
+      # Persist the SQLite database
+      - bingo-data:/app/data
+    # Override the DB path to use the persistent volume
+    # (set in .env or here)
+    networks:
+      - bingo-net
+
+  # ─── Cloudflare Tunnel ──────────────────────────────────────
+  cloudflared:
+    image: cloudflare/cloudflared:latest
+    container_name: bingo-tunnel
+    restart: unless-stopped
+    command: tunnel run
+    environment:
+      - TUNNEL_TOKEN=${CLOUDFLARE_TUNNEL_TOKEN}
+    networks:
+      - bingo-net
+    depends_on:
+      - bingo
+
+volumes:
+  bingo-data:
+
+networks:
+  bingo-net:
+    driver: bridge

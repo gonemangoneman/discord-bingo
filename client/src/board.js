@@ -1,5 +1,4 @@
 import { showNotification } from './notifications.js';
-import { emitMarkCell } from './socket.js';
 
 let boardState = null;
 let autoMark = true;
@@ -25,7 +24,7 @@ export function renderBoard(boardData, isAutoMark) {
       const cell = boardData.cells[row][col];
       const isMarked = cell.isFree || boardData.markedCells.some(([r, c]) => r === row && c === col);
 
-      const el = document.createElement('button');
+      const el = document.createElement('div');
       el.className = 'bingo-cell';
       el.dataset.row = row;
       el.dataset.col = col;
@@ -47,11 +46,6 @@ export function renderBoard(boardData, isAutoMark) {
         el.classList.add('called');
       }
 
-      // Click handler for manual marking
-      if (!cell.isFree && !isMarked && cell.triggered) {
-        el.addEventListener('click', () => handleCellClick(row, col));
-      }
-
       // Stagger animation
       el.style.animationDelay = `${(row * 5 + col) * 40}ms`;
 
@@ -60,37 +54,6 @@ export function renderBoard(boardData, isAutoMark) {
   }
 
   container.appendChild(grid);
-}
-
-/**
- * Handle cell click (manual mode or clicking a called event).
- */
-function handleCellClick(row, col) {
-  if (!boardState) return;
-
-  const cell = boardState.cells[row][col];
-  if (cell.isFree) return;
-  if (!cell.triggered) {
-    showNotification('This event hasn\'t been called yet!', 'warning');
-    return;
-  }
-
-  const alreadyMarked = boardState.markedCells.some(([r, c]) => r === row && c === col);
-  if (alreadyMarked) return;
-
-  if (!autoMark) {
-    // Manual mode — emit mark event
-    emitMarkCell(boardState.sessionId, boardState.userId, row, col);
-  }
-
-  // Optimistic local update
-  boardState.markedCells.push([row, col]);
-  const el = document.getElementById(`cell-${row}-${col}`);
-  if (el) {
-    el.classList.remove('called');
-    el.classList.add('marked', 'just-marked');
-    setTimeout(() => el.classList.remove('just-marked'), 600);
-  }
 }
 
 /**
@@ -114,14 +77,14 @@ export function onEventTriggered(eventId, eventText, affectedPlayers, userId) {
             boardState.markedCells.push([row, col]);
             if (el) {
               el.classList.add('marked', 'just-marked');
+              el.classList.remove('called');
               setTimeout(() => el.classList.remove('just-marked'), 600);
             }
           }
         } else {
-          // Manual mode: highlight as called (clickable)
+          // Manual mode: highlight as called
           if (el) {
             el.classList.add('called');
-            el.addEventListener('click', () => handleCellClick(row, col));
           }
         }
       }
@@ -129,6 +92,9 @@ export function onEventTriggered(eventId, eventText, affectedPlayers, userId) {
   }
 
   showNotification(`🎯 ${eventText}`, 'event');
+
+  // Check if any bingo line is now complete and update the button glow
+  updateBingoButtonState();
 }
 
 /**
@@ -146,6 +112,8 @@ export function onBoardUpdate(userId, markedCells) {
       setTimeout(() => el.classList.remove('just-marked'), 600);
     }
   }
+
+  updateBingoButtonState();
 }
 
 /**
@@ -158,6 +126,54 @@ export function highlightBingo(bingoType) {
     if (el) {
       el.classList.add('bingo-line');
     }
+  }
+}
+
+/**
+ * Check if the current board has any unclaimed bingo.
+ * Used to make the BINGO button glow when a line is complete.
+ */
+export function checkForPotentialBingo() {
+  if (!boardState) return false;
+
+  const BINGO_LINES = [
+    [[0,0],[0,1],[0,2],[0,3],[0,4]],
+    [[1,0],[1,1],[1,2],[1,3],[1,4]],
+    [[2,0],[2,1],[2,2],[2,3],[2,4]],
+    [[3,0],[3,1],[3,2],[3,3],[3,4]],
+    [[4,0],[4,1],[4,2],[4,3],[4,4]],
+    [[0,0],[1,0],[2,0],[3,0],[4,0]],
+    [[0,1],[1,1],[2,1],[3,1],[4,1]],
+    [[0,2],[1,2],[2,2],[3,2],[4,2]],
+    [[0,3],[1,3],[2,3],[3,3],[4,3]],
+    [[0,4],[1,4],[2,4],[3,4],[4,4]],
+    [[0,0],[1,1],[2,2],[3,3],[4,4]],
+    [[0,4],[1,3],[2,2],[3,1],[4,0]],
+  ];
+
+  const markedSet = new Set(boardState.markedCells.map(([r,c]) => `${r},${c}`));
+  // Free space is always marked
+  markedSet.add('2,2');
+
+  for (const line of BINGO_LINES) {
+    const complete = line.every(([r,c]) => markedSet.has(`${r},${c}`));
+    if (complete) return true;
+  }
+  return false;
+}
+
+/**
+ * Update the BINGO button's visual state based on whether a bingo is available.
+ */
+function updateBingoButtonState() {
+  const btn = document.getElementById('bingo-claim-btn');
+  if (!btn) return;
+
+  if (checkForPotentialBingo()) {
+    btn.classList.add('bingo-ready');
+    btn.disabled = false;
+  } else {
+    btn.classList.remove('bingo-ready');
   }
 }
 

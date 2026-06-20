@@ -88,3 +88,12 @@ CREATE TABLE IF NOT EXISTS leaderboard (
     total_bingos INTEGER DEFAULT 0,
     PRIMARY KEY (guild_id, user_id)
 );
+
+-- Cached display names (updated whenever a player interacts)
+CREATE TABLE IF NOT EXISTS user_display_names (
+    guild_id TEXT NOT NULL,
+    user_id TEXT NOT NULL,
+    display_name TEXT NOT NULL,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    PRIMARY KEY (guild_id, user_id)
+);

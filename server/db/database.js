@@ -2,7 +2,7 @@ const { DatabaseSync } = require('node:sqlite');
 const fs = require('fs');
 const path = require('path');
 
-const DB_PATH = path.join(__dirname, '..', '..', 'bingo.db');
+const DB_PATH = process.env.DATABASE_PATH || path.join(__dirname, '..', '..', 'bingo.db');
 const SCHEMA_PATH = path.join(__dirname, 'schema.sql');
 
 let db;
@@ -289,18 +289,44 @@ function incrementGamesPlayed(guildId, userId) {
 
 function getLeaderboard(guildId, limit = 10) {
   const db = getDatabase();
-  return db.prepare('SELECT * FROM leaderboard WHERE guild_id = ? ORDER BY total_points DESC LIMIT ?').all(guildId, limit);
+  return db.prepare(`
+    SELECT l.*, COALESCE(udn.display_name, l.user_id) as display_name
+    FROM leaderboard l
+    LEFT JOIN user_display_names udn ON udn.guild_id = l.guild_id AND udn.user_id = l.user_id
+    WHERE l.guild_id = ?
+    ORDER BY l.total_points DESC LIMIT ?
+  `).all(guildId, limit);
 }
 
 function getSessionScores(sessionId) {
   const db = getDatabase();
   return db.prepare(`
-    SELECT user_id, SUM(points_awarded) as total_points, COUNT(*) as bingo_count
-    FROM bingos
-    WHERE session_id = ?
-    GROUP BY user_id
+    SELECT b.user_id, SUM(b.points_awarded) as total_points, COUNT(*) as bingo_count,
+           COALESCE(udn.display_name, b.user_id) as display_name
+    FROM bingos b
+    JOIN game_sessions gs ON gs.id = b.session_id
+    LEFT JOIN user_display_names udn ON udn.guild_id = gs.guild_id AND udn.user_id = b.user_id
+    WHERE b.session_id = ?
+    GROUP BY b.user_id
     ORDER BY total_points DESC
   `).all(sessionId);
+}
+
+function upsertDisplayName(guildId, userId, displayName) {
+  const db = getDatabase();
+  return db.prepare(`
+    INSERT INTO user_display_names (guild_id, user_id, display_name, updated_at)
+    VALUES (?, ?, ?, CURRENT_TIMESTAMP)
+    ON CONFLICT(guild_id, user_id) DO UPDATE SET
+      display_name = excluded.display_name,
+      updated_at = CURRENT_TIMESTAMP
+  `).run(guildId, userId, displayName);
+}
+
+function getDisplayName(guildId, userId) {
+  const db = getDatabase();
+  const row = db.prepare('SELECT display_name FROM user_display_names WHERE guild_id = ? AND user_id = ?').get(guildId, userId);
+  return row?.display_name || userId;
 }
 
 module.exports = {
@@ -347,4 +373,7 @@ module.exports = {
   incrementGamesPlayed,
   getLeaderboard,
   getSessionScores,
+  // Display names
+  upsertDisplayName,
+  getDisplayName,
 };

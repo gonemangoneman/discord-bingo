@@ -121,6 +121,76 @@
   background: linear-gradient(135deg, rgba(255, 215, 0, 0.3), rgba(255, 170, 0, 0.25));
 }
 
+/* ─── BINGO Claim Button ─── */
+
+.board-actions {
+  display: flex;
+  justify-content: center;
+  padding: 12px 0 4px;
+}
+
+.bingo-claim-btn {
+  font-family: var(--font-family);
+  font-size: 1.3rem;
+  font-weight: 800;
+  letter-spacing: 0.1em;
+  padding: 12px 48px;
+  border: 2px solid rgba(124, 92, 252, 0.3);
+  border-radius: var(--radius-lg);
+  background: var(--bg-secondary);
+  color: var(--text-muted);
+  cursor: not-allowed;
+  transition: all 0.3s ease;
+  position: relative;
+  overflow: hidden;
+  text-transform: uppercase;
+}
+
+.bingo-claim-btn:disabled:not(.bingo-ready) {
+  opacity: 0.5;
+}
+
+/* When a bingo line is complete — the button GLOWS */
+.bingo-claim-btn.bingo-ready {
+  cursor: pointer;
+  border-color: rgba(255, 215, 0, 0.6);
+  color: #ffd700;
+  background: linear-gradient(135deg, rgba(255, 215, 0, 0.15), rgba(255, 107, 157, 0.1));
+  box-shadow: 0 0 20px rgba(255, 215, 0, 0.2), 0 0 40px rgba(255, 215, 0, 0.1);
+  animation: bingo-button-pulse 1.5s ease-in-out infinite;
+}
+
+.bingo-claim-btn.bingo-ready:hover {
+  transform: scale(1.05);
+  box-shadow: 0 0 30px rgba(255, 215, 0, 0.4), 0 0 60px rgba(255, 215, 0, 0.2);
+  background: linear-gradient(135deg, rgba(255, 215, 0, 0.25), rgba(255, 107, 157, 0.15));
+}
+
+.bingo-claim-btn.bingo-ready:active {
+  transform: scale(0.97);
+}
+
+@keyframes bingo-button-pulse {
+  0%, 100% {
+    box-shadow: 0 0 20px rgba(255, 215, 0, 0.2), 0 0 40px rgba(255, 215, 0, 0.1);
+  }
+  50% {
+    box-shadow: 0 0 30px rgba(255, 215, 0, 0.4), 0 0 60px rgba(255, 215, 0, 0.15);
+  }
+}
+
+.bingo-claim-btn.shake {
+  animation: shake 0.5s ease;
+}
+
+@keyframes shake {
+  0%, 100% { transform: translateX(0); }
+  20% { transform: translateX(-8px); }
+  40% { transform: translateX(8px); }
+  60% { transform: translateX(-6px); }
+  80% { transform: translateX(6px); }
+}
+
 /* ─── Responsive ─── */
 
 @media (max-width: 600px) {
@@ -137,5 +207,10 @@
   .cell-text {
     font-size: clamp(0.5rem, 2.5vw, 0.7rem);
     -webkit-line-clamp: 3;
+  }
+
+  .bingo-claim-btn {
+    font-size: 1.1rem;
+    padding: 10px 36px;
   }
 }

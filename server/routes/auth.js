@@ -3,10 +3,13 @@ const router = express.Router();
 
 // POST /api/token — Exchange Discord OAuth2 code for access token
 router.post('/token', async (req, res) => {
+  console.log('[Auth] Token exchange request received');
   const { code } = req.body;
   if (!code) {
+    console.error('[Auth] Missing authorization code in request body');
     return res.status(400).json({ error: 'Missing authorization code' });
   }
+  console.log('[Auth] Exchanging code:', code?.slice(0, 10) + '...');
 
   try {
     const response = await fetch('https://discord.com/api/oauth2/token', {

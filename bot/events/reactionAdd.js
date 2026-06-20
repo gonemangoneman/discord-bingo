@@ -4,22 +4,29 @@ const {
   getSessionEventByMessageId,
   triggerSessionEvent,
   getSessionPlayers,
-  getPlayerBoard,
   updateMarkedCells,
-  getPlayerBingos,
-  getBingoCount,
-  recordBingo,
 } = require('../../server/db/database');
-const { detectNewBingos } = require('../../server/services/scoringEngine');
 
-// Reference to the global Socket.io instance
-let io = null;
-function setSocketIO(socketIO) { io = socketIO; }
+const SERVER_URL = `http://localhost:${process.env.PORT || 3001}`;
+
+/**
+ * Notify the server process via HTTP so it can emit Socket.io events
+ */
+async function notifyServer(path, body) {
+  try {
+    await fetch(`${SERVER_URL}${path}`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(body),
+    });
+  } catch (err) {
+    console.warn('[Bot] Could not notify server:', err.message);
+  }
+}
 
 module.exports = {
   name: 'messageReactionAdd',
   once: false,
-  setSocketIO,
 
   async execute(reaction, user) {
     // Ignore bot reactions
@@ -109,58 +116,16 @@ module.exports = {
 
       if (wasMarked) {
         updateMarkedCells(session.id, player.user_id, markedCells);
-
-        // Check for new bingos
-        const existingBingos = getPlayerBingos(session.id, player.user_id);
-        const newBingos = detectNewBingos(board, markedCells, existingBingos);
-
-        for (const bingo of newBingos) {
-          const globalPos = getBingoCount(session.id) + 1;
-          const playerBingoCount = existingBingos.length + newBingos.indexOf(bingo);
-          const points = calculatePoints(globalPos, playerBingoCount);
-
-          recordBingo(session.id, player.user_id, bingo.type, globalPos, points);
-
-          console.log(`[Bot] BINGO! ${player.user_id} got ${bingo.type} (global #${globalPos}, ${points} pts)`);
-
-          // Emit bingo event
-          if (io) {
-            io.to(`session:${session.id}`).emit('bingo-achieved', {
-              userId: player.user_id,
-              bingoType: bingo.type,
-              globalPosition: globalPos,
-              points,
-            });
-          }
-
-          // Post notification
-          try {
-            const notifChannel = await reaction.message.guild.channels.fetch(config.notification_channel_id);
-            if (notifChannel) {
-              await notifChannel.send({
-                embeds: [{
-                  title: '🎉 BINGO!',
-                  description: `<@${player.user_id}> got a bingo! (**${bingo.type}**)\n\n🏆 **+${Math.round(points)} points** (${getOrdinal(globalPos)} bingo this session)`,
-                  color: 0xFEE75C,
-                }],
-              });
-            }
-          } catch (err) {
-            console.warn('[Bot] Could not post bingo notification:', err.message);
-          }
-        }
       }
     }
 
-    // Emit the event-triggered event to all activity clients
-    if (io) {
-      io.to(`session:${session.id}`).emit('event-triggered', {
-        eventId: sessionEvent.event_id,
-        eventText: sessionEvent.event_text,
-        triggeredBy: user.id,
-        affectedPlayers,
-      });
-    }
+    // Notify server to emit Socket.io event-triggered event
+    await notifyServer(`/api/game/${session.id}/event-triggered`, {
+      eventId: sessionEvent.event_id,
+      eventText: sessionEvent.event_text,
+      triggeredBy: user.id,
+      affectedPlayers,
+    });
 
     // Post notification in the notification channel
     try {
@@ -178,23 +143,3 @@ module.exports = {
     }
   },
 };
-
-/**
- * Calculate points for a bingo based on global position and player's bingo count
- */
-function calculatePoints(globalPosition, playerBingoIndex) {
-  // Global position base points
-  const basePoints = [10, 8, 6, 5, 4];
-  const base = globalPosition <= 5 ? basePoints[globalPosition - 1] : 3;
-
-  // Diminishing returns for same player (50% each subsequent)
-  const multiplier = Math.pow(0.5, playerBingoIndex);
-
-  return Math.ceil(base * multiplier);
-}
-
-function getOrdinal(n) {
-  const s = ['th', 'st', 'nd', 'rd'];
-  const v = n % 100;
-  return n + (s[(v - 20) % 10] || s[v] || s[0]);
-}

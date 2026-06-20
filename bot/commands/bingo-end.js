@@ -12,16 +12,24 @@ const {
   getLeaderboard,
 } = require('../../server/db/database');
 
-// Reference to the global Socket.io instance (set by server)
-let io = null;
-function setSocketIO(socketIO) { io = socketIO; }
+const SERVER_URL = `http://localhost:${process.env.PORT || 3001}`;
+
+async function notifyServer(path, body) {
+  try {
+    await fetch(`${SERVER_URL}${path}`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(body),
+    });
+  } catch (err) {
+    console.warn('[Bot] Could not notify server:', err.message);
+  }
+}
 
 module.exports = {
   data: new SlashCommandBuilder()
     .setName('bingo-end')
     .setDescription('End the current bingo game session'),
-
-  setSocketIO,
 
   async execute(interaction) {
     const config = getGuildConfig(interaction.guildId);
@@ -70,10 +78,8 @@ module.exports = {
       console.warn('[Bot] Could not clean event channel:', err.message);
     }
 
-    // Notify activity clients
-    if (io) {
-      io.to(`session:${session.id}`).emit('game-ended', { sessionId: session.id, scores });
-    }
+    // Notify activity clients via server bridge
+    await notifyServer(`/api/game/${session.id}/game-ended`, { scores });
 
     // Build results embed
     const bingos = getSessionBingos(session.id);
@@ -113,9 +119,13 @@ module.exports = {
     }
 
     // Post to notification channel
-    const notifChannel = await interaction.client.channels.fetch(config.notification_channel_id);
-    if (notifChannel && notifChannel.id !== interaction.channelId) {
-      await notifChannel.send({ embeds });
+    try {
+      const notifChannel = await interaction.client.channels.fetch(config.notification_channel_id);
+      if (notifChannel && notifChannel.id !== interaction.channelId) {
+        await notifChannel.send({ embeds });
+      }
+    } catch (err) {
+      console.warn('[Bot] Could not post to notification channel:', err.message);
     }
 
     await interaction.editReply({ embeds });

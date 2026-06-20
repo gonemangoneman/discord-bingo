@@ -5,8 +5,15 @@ const {
   getSessionSets,
   getTriggeredEvents,
   getGuildConfig,
+  upsertDisplayName,
+  getDisplayName,
+  getPlayerBoard,
+  getPlayerBingos,
+  getBingoCount,
+  recordBingo,
 } = require('../db/database');
 const { getOrCreateBoard, buildBoardData, markCell } = require('../services/gameManager');
+const { detectNewBingos, calculatePoints } = require('../services/scoringEngine');
 
 module.exports = function (io) {
   const router = express.Router();
@@ -84,6 +91,117 @@ module.exports = function (io) {
     });
 
     res.json(result);
+  });
+
+  // POST /api/game/register-name — Client registers its display name
+  router.post('/register-name', (req, res) => {
+    const { guildId, userId, displayName } = req.body;
+    if (!guildId || !userId || !displayName) {
+      return res.status(400).json({ error: 'Missing fields' });
+    }
+    upsertDisplayName(guildId, userId, displayName);
+    res.json({ ok: true });
+  });
+
+  // POST /api/game/:sessionId/claim-bingo — Player claims a bingo
+  router.post('/:sessionId/claim-bingo', (req, res) => {
+    const sessionId = Number(req.params.sessionId);
+    const { userId, guildId } = req.body;
+
+    if (!userId) {
+      return res.status(400).json({ error: 'Missing userId' });
+    }
+
+    const board = getPlayerBoard(sessionId, userId);
+    if (!board) {
+      return res.status(404).json({ error: 'No board found' });
+    }
+
+    // Check for new bingos
+    const existingBingos = getPlayerBingos(sessionId, userId);
+    const newBingos = detectNewBingos(board.board_layout, board.marked_cells, existingBingos);
+
+    if (newBingos.length === 0) {
+      return res.json({ claimed: [], error: 'No new bingos to claim!' });
+    }
+
+    const claimed = [];
+    for (const bingo of newBingos) {
+      const globalPos = getBingoCount(sessionId) + 1;
+      const playerBingoIndex = existingBingos.length + claimed.length;
+      const points = calculatePoints(globalPos, playerBingoIndex);
+
+      recordBingo(sessionId, userId, bingo.type, globalPos, points);
+      claimed.push({
+        bingoType: bingo.type,
+        globalPosition: globalPos,
+        points,
+      });
+
+      const playerName = getDisplayName(guildId || '', userId);
+
+      console.log(`[Game] BINGO claimed! ${playerName} got ${bingo.type} (global #${globalPos}, ${points} pts)`);
+
+      // Broadcast to all activity clients
+      io.to(`session:${sessionId}`).emit('bingo-achieved', {
+        userId,
+        displayName: playerName,
+        bingoType: bingo.type,
+        globalPosition: globalPos,
+        points,
+      });
+    }
+
+    res.json({ claimed });
+  });
+
+  // ─── Bot → Server bridge (called by the bot process to emit Socket.io events) ───
+
+  // POST /api/game/:sessionId/event-triggered — Bot notifies server that an event was triggered
+  router.post('/:sessionId/event-triggered', (req, res) => {
+    const sessionId = Number(req.params.sessionId);
+    const { eventId, eventText, triggeredBy, affectedPlayers } = req.body;
+
+    console.log(`[Game] Broadcasting event-triggered: "${eventText}" to session ${sessionId}`);
+
+    io.to(`session:${sessionId}`).emit('event-triggered', {
+      eventId,
+      eventText,
+      triggeredBy,
+      affectedPlayers,
+    });
+
+    res.json({ ok: true });
+  });
+
+  // POST /api/game/:sessionId/bingo-achieved — Bot notifies server of a bingo
+  router.post('/:sessionId/bingo-achieved', (req, res) => {
+    const sessionId = Number(req.params.sessionId);
+    const { userId, bingoType, globalPosition, points } = req.body;
+
+    console.log(`[Game] Broadcasting bingo-achieved: ${userId} got ${bingoType} in session ${sessionId}`);
+
+    io.to(`session:${sessionId}`).emit('bingo-achieved', {
+      userId,
+      displayName: req.body.displayName || userId,
+      bingoType,
+      globalPosition,
+      points,
+    });
+
+    res.json({ ok: true });
+  });
+
+  // POST /api/game/:sessionId/game-ended — Bot notifies server that the game ended
+  router.post('/:sessionId/game-ended', (req, res) => {
+    const sessionId = Number(req.params.sessionId);
+    const { scores } = req.body;
+
+    console.log(`[Game] Broadcasting game-ended for session ${sessionId}`);
+
+    io.to(`session:${sessionId}`).emit('game-ended', { sessionId, scores });
+
+    res.json({ ok: true });
   });
 
   return router;

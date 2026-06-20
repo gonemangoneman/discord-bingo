@@ -1,8 +1,9 @@
-node_modules/
-dist/
-.env
+node_modules
+.git
 *.db
 *.db-wal
 *.db-shm
 .DS_Store
+dist/
 server/public/
+.gemini/

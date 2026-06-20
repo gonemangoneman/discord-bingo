@@ -4,7 +4,7 @@ import './styles/animations.css';
 
 import { initDiscordSdk, getUser, getGuildId } from './discord.js';
 import { connectSocket, joinSession } from './socket.js';
-import { renderBoard, onEventTriggered, onBoardUpdate, highlightBingo } from './board.js';
+import { renderBoard, onEventTriggered, onBoardUpdate, highlightBingo, checkForPotentialBingo } from './board.js';
 import { renderScorePanel, updateScore, updateLeaderboard } from './scoring.js';
 import { showNotification, showBingoNotification, showGameOver } from './notifications.js';
 
@@ -48,6 +48,24 @@ async function main() {
     }
     const boardData = await boardRes.json();
 
+    // Register display name with server
+    const displayName = user.global_name || user.username;
+    try {
+      await fetch('/.proxy/api/game/register-name', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ guildId, userId: user.id, displayName }),
+      });
+    } catch {
+      try {
+        await fetch('/api/game/register-name', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ guildId, userId: user.id, displayName }),
+        });
+      } catch (e) { /* ignore */ }
+    }
+
     // Build the UI
     app.innerHTML = `
       <div class="app-layout">
@@ -63,10 +81,19 @@ async function main() {
         </header>
         <main class="app-main">
           <div id="board-container" class="board-container"></div>
+          <div class="board-actions">
+            <button id="bingo-claim-btn" class="bingo-claim-btn" disabled>
+              🎯 BINGO!
+            </button>
+          </div>
           <aside id="score-panel" class="score-panel"></aside>
         </main>
       </div>
     `;
+
+    // Wire up the BINGO button
+    const bingoBtn = document.getElementById('bingo-claim-btn');
+    bingoBtn.addEventListener('click', () => claimBingo(session.id, user.id, guildId));
 
     // Render board and score panel
     renderBoard(boardData, autoMark);
@@ -92,11 +119,8 @@ async function main() {
       if (isMe) {
         highlightBingo(data.bingoType);
       }
-      showBingoNotification(
-        data.userId === user.id ? 'You' : data.userId,
-        data.points,
-        isMe
-      );
+      const name = isMe ? 'You' : (data.displayName || data.userId);
+      showBingoNotification(name, data.points, isMe);
 
       // Refresh leaderboard
       fetchLeaderboard(session.id, guildId, user.id);
@@ -139,11 +163,11 @@ async function fetchLeaderboard(sessionId, guildId, userId) {
     }
     const scores = await res.json();
 
-    // Mark current player
+    // Mark current player and use display names from server
     const enhanced = scores.map(s => ({
       ...s,
       isCurrentPlayer: s.user_id === userId,
-      displayName: s.user_id, // Will be enriched later
+      displayName: s.display_name || s.user_id,
     }));
 
     updateLeaderboard(enhanced);
@@ -172,6 +196,61 @@ function showNoGameScreen(app) {
 function updateLoadingText(text) {
   const el = document.querySelector('.loader-text');
   if (el) el.textContent = text;
+}
+
+async function claimBingo(sessionId, userId, guildId) {
+  const btn = document.getElementById('bingo-claim-btn');
+  if (!btn || btn.disabled) return;
+
+  // Check locally first
+  if (!checkForPotentialBingo()) {
+    showNotification('❌ You don\'t have a bingo yet!', 'warning');
+    btn.classList.add('shake');
+    setTimeout(() => btn.classList.remove('shake'), 500);
+    return;
+  }
+
+  btn.disabled = true;
+  btn.textContent = '⏳ Claiming...';
+
+  try {
+    let res;
+    try {
+      res = await fetch(`/.proxy/api/game/${sessionId}/claim-bingo`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ userId, guildId }),
+      });
+    } catch {
+      res = await fetch(`/api/game/${sessionId}/claim-bingo`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ userId, guildId }),
+      });
+    }
+
+    const data = await res.json();
+
+    if (data.claimed && data.claimed.length > 0) {
+      for (const b of data.claimed) {
+        highlightBingo(b.bingoType);
+      }
+      showNotification(`🎉 BINGO! +${data.claimed.reduce((s, b) => s + Math.round(b.points), 0)} points!`, 'bingo');
+    } else if (data.error) {
+      showNotification(`❌ ${data.error}`, 'warning');
+    } else {
+      showNotification('No new bingos to claim.', 'info');
+    }
+  } catch (err) {
+    console.error('[App] Claim bingo failed:', err);
+    showNotification('❌ Failed to claim bingo.', 'error');
+  }
+
+  btn.textContent = '🎯 BINGO!';
+  // Re-enable after a short cooldown
+  setTimeout(() => {
+    btn.disabled = false;
+  }, 2000);
 }
 
 // Boot!
