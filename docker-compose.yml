@@ -4,11 +4,13 @@ services:
     build: .
     container_name: bingo-bot
     restart: unless-stopped
-    env_file: .env
     environment:
       - PORT=3001
       - NODE_ENV=production
       - DATABASE_PATH=/app/data/bingo.db
+      - DISCORD_CLIENT_ID=${DISCORD_CLIENT_ID}
+      - DISCORD_CLIENT_SECRET=${DISCORD_CLIENT_SECRET}
+      - DISCORD_BOT_TOKEN=${DISCORD_BOT_TOKEN}
     volumes:
       # Persist the SQLite database
       - bingo-data:/app/data
