@@ -1,0 +1,141 @@
+/* ═══════════════════════════════════════════════════════════
+   Bingo Board Styles
+   ═══════════════════════════════════════════════════════════ */
+
+.bingo-grid {
+  display: grid;
+  grid-template-columns: repeat(5, 1fr);
+  grid-template-rows: repeat(5, 1fr);
+  gap: 6px;
+  width: min(100%, 500px);
+  aspect-ratio: 1;
+  max-height: calc(100vh - 120px);
+}
+
+.bingo-cell {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 6px;
+  border: none;
+  border-radius: var(--radius-md);
+  cursor: default;
+  overflow: hidden;
+  font-family: var(--font-family);
+  font-weight: 500;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+
+  /* Default state */
+  background: var(--bg-secondary);
+  border: 1px solid var(--border-glass);
+  color: var(--text-primary);
+
+  /* Entry animation */
+  animation: cellEnter 0.4s ease backwards;
+}
+
+.cell-text {
+  font-size: clamp(0.55rem, 1.4vw, 0.8rem);
+  line-height: 1.2;
+  text-align: center;
+  word-break: break-word;
+  overflow: hidden;
+  display: -webkit-box;
+  -webkit-line-clamp: 4;
+  -webkit-box-orient: vertical;
+}
+
+/* ─── Cell States ─── */
+
+/* Hoverable (called but not marked in manual mode) */
+.bingo-cell.called {
+  background: rgba(78, 205, 196, 0.12);
+  border-color: rgba(78, 205, 196, 0.4);
+  cursor: pointer;
+  animation: pulse-glow 2s ease-in-out infinite;
+}
+
+.bingo-cell.called:hover {
+  background: rgba(78, 205, 196, 0.25);
+  transform: scale(1.05);
+  box-shadow: 0 0 16px rgba(78, 205, 196, 0.3);
+}
+
+/* Marked */
+.bingo-cell.marked {
+  background: linear-gradient(135deg, rgba(124, 92, 252, 0.35), rgba(78, 205, 196, 0.25));
+  border-color: rgba(124, 92, 252, 0.5);
+  color: var(--text-primary);
+}
+
+.bingo-cell.marked::after {
+  content: '✓';
+  position: absolute;
+  top: 4px;
+  right: 6px;
+  font-size: 0.7rem;
+  color: var(--accent-green);
+  font-weight: 700;
+}
+
+/* Just marked (animation trigger) */
+.bingo-cell.just-marked {
+  animation: markFlash 0.6s ease;
+}
+
+/* Bingo line highlight */
+.bingo-cell.bingo-line {
+  background: linear-gradient(135deg, rgba(255, 215, 0, 0.3), rgba(255, 107, 157, 0.2));
+  border-color: rgba(255, 215, 0, 0.6);
+  box-shadow: 0 0 20px rgba(255, 215, 0, 0.2), inset 0 0 20px rgba(255, 215, 0, 0.05);
+}
+
+.bingo-cell.bingo-line::before {
+  content: '';
+  position: absolute;
+  inset: -1px;
+  border-radius: var(--radius-md);
+  background: var(--gradient-bingo);
+  opacity: 0.15;
+  z-index: -1;
+}
+
+/* FREE space */
+.bingo-cell.free {
+  background: linear-gradient(135deg, rgba(255, 215, 0, 0.2), rgba(255, 170, 0, 0.15));
+  border-color: rgba(255, 215, 0, 0.4);
+  cursor: default;
+}
+
+.bingo-cell.free .cell-text {
+  font-weight: 800;
+  font-size: clamp(0.6rem, 1.5vw, 0.85rem);
+  background: var(--gradient-gold);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+.bingo-cell.free.marked {
+  background: linear-gradient(135deg, rgba(255, 215, 0, 0.3), rgba(255, 170, 0, 0.25));
+}
+
+/* ─── Responsive ─── */
+
+@media (max-width: 600px) {
+  .bingo-grid {
+    gap: 4px;
+    max-height: 50vh;
+  }
+
+  .bingo-cell {
+    border-radius: var(--radius-sm);
+    padding: 4px;
+  }
+
+  .cell-text {
+    font-size: clamp(0.5rem, 2.5vw, 0.7rem);
+    -webkit-line-clamp: 3;
+  }
+}
