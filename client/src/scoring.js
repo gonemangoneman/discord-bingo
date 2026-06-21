@@ -36,9 +36,8 @@ export function updateScore(points, bingos) {
   const bingosEl = document.getElementById('score-bingos');
 
   if (pointsEl) {
-    const oldPoints = currentPoints;
     currentPoints = Math.round(points);
-    animateNumber(pointsEl, oldPoints, currentPoints);
+    pointsEl.textContent = currentPoints;
   }
 
   if (bingosEl) {

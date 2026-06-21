@@ -50,7 +50,6 @@ function getIcon(type) {
 export function showBingoNotification(playerName, points, isCurrentPlayer) {
   if (isCurrentPlayer) {
     showNotification(`YOU GOT BINGO! +${Math.round(points)} points!`, 'bingo');
-    launchConfetti();
   } else {
     showNotification(`${playerName} got a BINGO! (+${Math.round(points)} pts)`, 'bingo');
   }
@@ -72,7 +71,7 @@ export function showGameOver(scores) {
           ? scores.map((s, i) => {
               const medals = ['🥇', '🥈', '🥉'];
               const medal = medals[i] || `${i + 1}.`;
-              return `<div class="game-over-entry">${medal} ${s.displayName || s.userId} — <strong>${Math.round(s.total_points)} pts</strong></div>`;
+              return `<div class="game-over-entry">${medal} ${s.display_name || s.user_id || 'Unknown'} — <strong>${Math.round(s.total_points)} pts</strong></div>`;
             }).join('')
           : '<p>No bingos were achieved!</p>'
         }

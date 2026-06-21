@@ -24,15 +24,12 @@
   overflow: hidden;
   font-family: var(--font-family);
   font-weight: 500;
-  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  transition: background 0.2s ease;
 
   /* Default state */
   background: var(--bg-secondary);
   border: 1px solid var(--border-glass);
   color: var(--text-primary);
-
-  /* Entry animation */
-  animation: cellEnter 0.4s ease backwards;
 }
 
 .cell-text {
@@ -48,18 +45,10 @@
 
 /* ─── Cell States ─── */
 
-/* Hoverable (called but not marked in manual mode) */
+/* Called (manual mode only) */
 .bingo-cell.called {
   background: rgba(78, 205, 196, 0.12);
   border-color: rgba(78, 205, 196, 0.4);
-  cursor: pointer;
-  animation: pulse-glow 2s ease-in-out infinite;
-}
-
-.bingo-cell.called:hover {
-  background: rgba(78, 205, 196, 0.25);
-  transform: scale(1.05);
-  box-shadow: 0 0 16px rgba(78, 205, 196, 0.3);
 }
 
 /* Marked */
@@ -79,26 +68,15 @@
   font-weight: 700;
 }
 
-/* Just marked (animation trigger) */
+/* Just marked */
 .bingo-cell.just-marked {
-  animation: markFlash 0.6s ease;
+  animation: markFlash 0.3s ease;
 }
 
 /* Bingo line highlight */
 .bingo-cell.bingo-line {
   background: linear-gradient(135deg, rgba(255, 215, 0, 0.3), rgba(255, 107, 157, 0.2));
   border-color: rgba(255, 215, 0, 0.6);
-  box-shadow: 0 0 20px rgba(255, 215, 0, 0.2), inset 0 0 20px rgba(255, 215, 0, 0.05);
-}
-
-.bingo-cell.bingo-line::before {
-  content: '';
-  position: absolute;
-  inset: -1px;
-  border-radius: var(--radius-md);
-  background: var(--gradient-bingo);
-  opacity: 0.15;
-  z-index: -1;
 }
 
 /* FREE space */
@@ -150,33 +128,21 @@
   opacity: 0.5;
 }
 
-/* When a bingo line is complete — the button GLOWS */
+/* When a bingo line is complete — the button lights up */
 .bingo-claim-btn.bingo-ready {
   cursor: pointer;
   border-color: rgba(255, 215, 0, 0.6);
   color: #ffd700;
   background: linear-gradient(135deg, rgba(255, 215, 0, 0.15), rgba(255, 107, 157, 0.1));
-  box-shadow: 0 0 20px rgba(255, 215, 0, 0.2), 0 0 40px rgba(255, 215, 0, 0.1);
-  animation: bingo-button-pulse 1.5s ease-in-out infinite;
+  box-shadow: 0 0 12px rgba(255, 215, 0, 0.2);
 }
 
 .bingo-claim-btn.bingo-ready:hover {
-  transform: scale(1.05);
-  box-shadow: 0 0 30px rgba(255, 215, 0, 0.4), 0 0 60px rgba(255, 215, 0, 0.2);
   background: linear-gradient(135deg, rgba(255, 215, 0, 0.25), rgba(255, 107, 157, 0.15));
 }
 
 .bingo-claim-btn.bingo-ready:active {
   transform: scale(0.97);
-}
-
-@keyframes bingo-button-pulse {
-  0%, 100% {
-    box-shadow: 0 0 20px rgba(255, 215, 0, 0.2), 0 0 40px rgba(255, 215, 0, 0.1);
-  }
-  50% {
-    box-shadow: 0 0 30px rgba(255, 215, 0, 0.4), 0 0 60px rgba(255, 215, 0, 0.15);
-  }
 }
 
 .bingo-claim-btn.shake {
