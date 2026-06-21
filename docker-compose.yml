@@ -1,7 +1,10 @@
 services:
   # ─── Bingo Bot + Server ─────────────────────────────────────
   bingo:
-    build: .
+    build:
+      context: .
+      args:
+        - DISCORD_CLIENT_ID=${DISCORD_CLIENT_ID}
     container_name: bingo-bot
     restart: unless-stopped
     environment:

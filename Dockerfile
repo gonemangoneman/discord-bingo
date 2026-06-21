@@ -19,7 +19,10 @@ RUN npm ci
 # Copy source
 COPY client/ ./client/
 COPY server/ ./server/
-COPY .env* ./
+
+# Discord Client ID must be available at build time for Vite
+ARG DISCORD_CLIENT_ID
+ENV VITE_DISCORD_CLIENT_ID=${DISCORD_CLIENT_ID}
 
 # Build the client (outputs to server/public/)
 RUN npm run build
