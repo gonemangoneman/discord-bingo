@@ -61,6 +61,9 @@ export function renderBoard(boardData, isAutoMark) {
   }
 
   container.appendChild(grid);
+
+  // Check if a bingo line is already complete on load
+  setTimeout(() => updateBingoButtonState(), 0);
 }
 
 /**
