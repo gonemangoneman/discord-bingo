@@ -2,6 +2,7 @@ import { showNotification } from './notifications.js';
 
 let boardState = null;
 let autoMark = true;
+const claimedBingoTypes = new Set();
 
 /**
  * Render the 5x5 bingo board.
@@ -144,26 +145,26 @@ export function checkForPotentialBingo() {
   if (!boardState) return false;
 
   const BINGO_LINES = [
-    [[0,0],[0,1],[0,2],[0,3],[0,4]],
-    [[1,0],[1,1],[1,2],[1,3],[1,4]],
-    [[2,0],[2,1],[2,2],[2,3],[2,4]],
-    [[3,0],[3,1],[3,2],[3,3],[3,4]],
-    [[4,0],[4,1],[4,2],[4,3],[4,4]],
-    [[0,0],[1,0],[2,0],[3,0],[4,0]],
-    [[0,1],[1,1],[2,1],[3,1],[4,1]],
-    [[0,2],[1,2],[2,2],[3,2],[4,2]],
-    [[0,3],[1,3],[2,3],[3,3],[4,3]],
-    [[0,4],[1,4],[2,4],[3,4],[4,4]],
-    [[0,0],[1,1],[2,2],[3,3],[4,4]],
-    [[0,4],[1,3],[2,2],[3,1],[4,0]],
+    { type: 'row-0', cells: [[0,0],[0,1],[0,2],[0,3],[0,4]] },
+    { type: 'row-1', cells: [[1,0],[1,1],[1,2],[1,3],[1,4]] },
+    { type: 'row-2', cells: [[2,0],[2,1],[2,2],[2,3],[2,4]] },
+    { type: 'row-3', cells: [[3,0],[3,1],[3,2],[3,3],[3,4]] },
+    { type: 'row-4', cells: [[4,0],[4,1],[4,2],[4,3],[4,4]] },
+    { type: 'col-0', cells: [[0,0],[1,0],[2,0],[3,0],[4,0]] },
+    { type: 'col-1', cells: [[0,1],[1,1],[2,1],[3,1],[4,1]] },
+    { type: 'col-2', cells: [[0,2],[1,2],[2,2],[3,2],[4,2]] },
+    { type: 'col-3', cells: [[0,3],[1,3],[2,3],[3,3],[4,3]] },
+    { type: 'col-4', cells: [[0,4],[1,4],[2,4],[3,4],[4,4]] },
+    { type: 'diag-main', cells: [[0,0],[1,1],[2,2],[3,3],[4,4]] },
+    { type: 'diag-anti', cells: [[0,4],[1,3],[2,2],[3,1],[4,0]] },
   ];
 
   const markedSet = new Set(boardState.markedCells.map(([r,c]) => `${r},${c}`));
-  // Free space is always marked
   markedSet.add('2,2');
 
   for (const line of BINGO_LINES) {
-    const complete = line.every(([r,c]) => markedSet.has(`${r},${c}`));
+    if (claimedBingoTypes.has(line.type)) continue; // skip already-claimed lines
+    const complete = line.cells.every(([r,c]) => markedSet.has(`${r},${c}`));
     if (complete) return true;
   }
   return false;
@@ -181,7 +182,16 @@ function updateBingoButtonState() {
     btn.disabled = false;
   } else {
     btn.classList.remove('bingo-ready');
+    btn.disabled = true;
   }
+}
+
+/**
+ * Mark a bingo type as claimed (so the button goes back to default).
+ */
+export function addClaimedBingo(bingoType) {
+  claimedBingoTypes.add(bingoType);
+  updateBingoButtonState();
 }
 
 function getBingoCells(type) {

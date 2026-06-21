@@ -514,6 +514,17 @@ body {
   }
 }
 
+/* Hide header in very small / PiP mode */
+@media (max-height: 400px) {
+  .app-header {
+    display: none;
+  }
+
+  .app-main {
+    padding: var(--space-xs);
+  }
+}
+
 @keyframes spin {
   to { transform: rotate(360deg); }
 }

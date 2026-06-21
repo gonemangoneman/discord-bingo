@@ -4,7 +4,7 @@ import './styles/animations.css';
 
 import { initDiscordSdk, getUser, getGuildId } from './discord.js';
 import { connectSocket, joinSession } from './socket.js';
-import { renderBoard, onEventTriggered, onBoardUpdate, highlightBingo, checkForPotentialBingo } from './board.js';
+import { renderBoard, onEventTriggered, onBoardUpdate, highlightBingo, checkForPotentialBingo, addClaimedBingo } from './board.js';
 import { renderScorePanel, updateScore, updateLeaderboard } from './scoring.js';
 import { showNotification, showBingoNotification, showGameOver } from './notifications.js';
 
@@ -69,7 +69,7 @@ async function main() {
     // Build the UI
     app.innerHTML = `
       <div class="app-layout">
-        <header class="app-header">
+        <header class="app-header" id="app-header">
           <div class="header-left">
             <h1 class="app-title">🎯 Stream Bingo</h1>
             <span class="session-badge">Session #${session.id}</span>
@@ -118,6 +118,7 @@ async function main() {
       const isMe = data.userId === user.id;
       if (isMe) {
         highlightBingo(data.bingoType);
+        addClaimedBingo(data.bingoType);
       }
       const name = isMe ? 'You' : (data.displayName || data.userId);
       showBingoNotification(name, data.points, isMe);
@@ -234,6 +235,7 @@ async function claimBingo(sessionId, userId, guildId) {
     if (data.claimed && data.claimed.length > 0) {
       for (const b of data.claimed) {
         highlightBingo(b.bingoType);
+        addClaimedBingo(b.bingoType);
       }
       showNotification(`🎉 BINGO! +${data.claimed.reduce((s, b) => s + Math.round(b.points), 0)} points!`, 'bingo');
     } else if (data.error) {

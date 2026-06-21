@@ -73,10 +73,15 @@
   animation: markFlash 0.3s ease;
 }
 
-/* Bingo line highlight */
-.bingo-cell.bingo-line {
+/* Bingo line highlight — must override .marked */
+.bingo-cell.bingo-line,
+.bingo-cell.marked.bingo-line {
   background: linear-gradient(135deg, rgba(255, 215, 0, 0.3), rgba(255, 107, 157, 0.2));
   border-color: rgba(255, 215, 0, 0.6);
+}
+
+.bingo-cell.bingo-line::after {
+  color: var(--accent-gold);
 }
 
 /* FREE space */
