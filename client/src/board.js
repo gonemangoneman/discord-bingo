@@ -40,10 +40,17 @@ export function renderBoard(boardData, isAutoMark) {
 
       if (isMarked) {
         el.classList.add('marked');
-      }
-
-      if (cell.triggered && !isMarked) {
-        el.classList.add('called');
+      } else if (cell.triggered) {
+        if (autoMark) {
+          // Auto-mark: triggered means marked
+          el.classList.add('marked');
+          if (!boardData.markedCells.some(([r, c]) => r === row && c === col)) {
+            boardData.markedCells.push([row, col]);
+          }
+        } else {
+          // Manual mode: show as called (player needs to click)
+          el.classList.add('called');
+        }
       }
 
       // Stagger animation
@@ -71,15 +78,12 @@ export function onEventTriggered(eventId, eventText, affectedPlayers, userId) {
         const el = document.getElementById(`cell-${row}-${col}`);
 
         if (autoMark) {
-          // Auto-mark: check if this player was affected
-          const affected = affectedPlayers?.find(p => p.userId === userId && p.row === row && p.col === col);
-          if (affected) {
-            boardState.markedCells.push([row, col]);
-            if (el) {
-              el.classList.add('marked', 'just-marked');
-              el.classList.remove('called');
-              setTimeout(() => el.classList.remove('just-marked'), 600);
-            }
+          // Auto-mark: triggered = marked, always
+          boardState.markedCells.push([row, col]);
+          if (el) {
+            el.classList.add('marked', 'just-marked');
+            el.classList.remove('called');
+            setTimeout(() => el.classList.remove('just-marked'), 600);
           }
         } else {
           // Manual mode: highlight as called
