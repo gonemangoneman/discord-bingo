@@ -11,6 +11,7 @@ const {
   getPlayerBingos,
   getBingoCount,
   recordBingo,
+  updateMarkedCells,
 } = require('../db/database');
 const { getOrCreateBoard, buildBoardData, markCell } = require('../services/gameManager');
 const { detectNewBingos, calculatePoints } = require('../services/scoringEngine');
@@ -117,9 +118,33 @@ module.exports = function (io) {
       return res.status(404).json({ error: 'No board found' });
     }
 
-    // Check for new bingos
+    // Ensure all triggered events are marked on this player's board
+    // (handles cross-process sync delays between bot and server)
+    const triggered = getTriggeredEvents(sessionId);
+    const triggeredEventIds = new Set(triggered.map(t => t.event_id));
+    const markedCells = [...board.marked_cells];
+    let updated = false;
+
+    for (let row = 0; row < 5; row++) {
+      for (let col = 0; col < 5; col++) {
+        const eventId = board.board_layout[row][col];
+        if (eventId !== -1 && triggeredEventIds.has(eventId)) {
+          const alreadyMarked = markedCells.some(([r, c]) => r === row && c === col);
+          if (!alreadyMarked) {
+            markedCells.push([row, col]);
+            updated = true;
+          }
+        }
+      }
+    }
+
+    if (updated) {
+      updateMarkedCells(sessionId, userId, markedCells);
+    }
+
+    // Check for new bingos using the fully up-to-date marks
     const existingBingos = getPlayerBingos(sessionId, userId);
-    const newBingos = detectNewBingos(board.board_layout, board.marked_cells, existingBingos);
+    const newBingos = detectNewBingos(board.board_layout, markedCells, existingBingos);
 
     if (newBingos.length === 0) {
       return res.json({ claimed: [], error: 'No new bingos to claim!' });
