@@ -177,12 +177,17 @@ function updateBingoButtonState() {
   const btn = document.getElementById('bingo-claim-btn');
   if (!btn) return;
 
-  if (checkForPotentialBingo()) {
+  const grid = document.getElementById('bingo-grid');
+  const hasBingo = checkForPotentialBingo();
+
+  if (hasBingo) {
     btn.classList.add('bingo-ready');
     btn.disabled = false;
+    if (grid) grid.classList.add('bingo-ready');
   } else {
     btn.classList.remove('bingo-ready');
     btn.disabled = true;
+    if (grid) grid.classList.remove('bingo-ready');
   }
 }
 

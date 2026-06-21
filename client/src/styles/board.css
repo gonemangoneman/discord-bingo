@@ -10,6 +10,16 @@
   width: min(100%, 500px);
   aspect-ratio: 1;
   max-height: calc(100vh - 120px);
+  border: 2px solid transparent;
+  border-radius: var(--radius-lg);
+  padding: 4px;
+  transition: border-color 0.3s ease, box-shadow 0.3s ease;
+}
+
+/* Gold border on the grid when bingo is ready (visible in PiP) */
+.bingo-grid.bingo-ready {
+  border-color: rgba(255, 215, 0, 0.5);
+  box-shadow: 0 0 12px rgba(255, 215, 0, 0.15);
 }
 
 .bingo-cell {
@@ -183,5 +193,16 @@
   .bingo-claim-btn {
     font-size: 1.1rem;
     padding: 10px 36px;
+  }
+}
+
+/* PiP / minimized: hide button, gold border on grid instead */
+@media (max-height: 400px) {
+  .board-actions {
+    display: none;
+  }
+
+  .bingo-grid {
+    max-height: calc(100vh - 16px);
   }
 }
