@@ -61,6 +61,10 @@ module.exports = function (io) {
         }
       }
 
+      // Include existing bingos so the client can restore highlights
+      const existingBingos = getPlayerBingos(Number(sessionId), userId);
+      boardData.claimedBingos = existingBingos.map(b => b.bingo_type);
+
       res.json(boardData);
     } catch (err) {
       console.error('[Game] Error getting board:', err);

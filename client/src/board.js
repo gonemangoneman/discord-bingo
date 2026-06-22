@@ -63,6 +63,19 @@ export function renderBoard(boardData, isAutoMark) {
 
   container.appendChild(grid);
 
+  // Restore previously claimed bingos (from server)
+  if (boardData.claimedBingos && boardData.claimedBingos.length > 0) {
+    for (const bingoType of boardData.claimedBingos) {
+      claimedBingoTypes.add(bingoType);
+      // Re-apply bingo-line highlight
+      const cells = getBingoCells(bingoType);
+      for (const [r, c] of cells) {
+        const el = document.getElementById(`cell-${r}-${c}`);
+        if (el) el.classList.add('bingo-line');
+      }
+    }
+  }
+
   // Check if a bingo line is already complete on load
   setTimeout(() => updateBingoButtonState(), 0);
 }
